@@ -1,0 +1,23 @@
+{
+	"name": "bcdc-encrypted-wallet-extract",
+	"description": "extract blockchain.com encrypted payloads from guids",
+	"version": "0.0.1",
+	"license": "UNLICENSED",
+	"main": "index.js",
+	"scripts": {
+		"format": "prettier --write \"./**/*.{js,json}\""
+	},
+	"dependencies": {
+		"axios": "0.27.2",
+		"chalk": "4.1.2",
+		"cli-alerts": "1.2.2",
+		"cli-handle-error": "4.4.0",
+		"cli-handle-unhandled": "1.1.1",
+		"cli-welcome": "2.2.2",
+		"enquirer": "2.3.6",
+		"guid": "0.0.12"
+	},
+	"devDependencies": {
+		"prettier": "2.6.2"
+	}
+}
