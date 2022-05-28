@@ -1,5 +1,5 @@
 # bcdc-encrypted-wallet-extract
-NodeJs tool to extract blockchain.com/blockchain.info encrypted payloads from wallet guids
+Node CLI tool to extract encrypted wallet payloads from a Blockchain.com Wallet ID
 
 ## Usage
 1) Clone repo
