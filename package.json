@@ -1,6 +1,6 @@
 {
 	"name": "bcdc-encrypted-wallet-extract",
-	"description": "Extract blockchain.com/blockchain.info encrypted payloads from wallet guids",
+	"description": "Node CLI tool to extract encrypted wallet payloads from a Blockchain.com Wallet ID",
 	"version": "0.0.1",
 	"license": "UNLICENSED",
 	"main": "index.js",
