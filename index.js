@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 const axios = require('axios');
+const fs = require('fs');
 const cli = require('./utils/cli');
 const api = require('./utils/api');
 
@@ -77,9 +78,22 @@ const api = require('./utils/api');
 	getPayloadTask()
 		.then(payload => {
 			if (saveToJsonFile) {
-				return console.log(`SAVE TO FILE: ${payload}`)
+				try {
+					fs.writeFileSync(`./wallet.aes.json`, payload.toString());
+					return console.log(`SAVE TO FILE: ${payload}`)
+				} catch (err) {
+					console.log(`Encrypted Wallet Payload`)
+					console.log('')
+					console.log(payload)
+					console.log('')
+					console.log(`Error: Failed to write to filesystem. Copy and manually save your payload from above.`)
+				}
+			} else {
+				console.log(`Encrypted Wallet Payload`)
+				console.log('')
+				console.log(payload)
+				console.log('')
 			}
-			console.log(payload);
 		})
 		.catch(err => {
 			console.log(`Error: ${err}`);
