@@ -1,6 +1,5 @@
 #!/usr/bin/env node
 
-const axios = require('axios');
 const fs = require('fs');
 const cli = require('./utils/cli');
 const api = require('./utils/api');
@@ -11,13 +10,6 @@ const api = require('./utils/api');
 	// get wallet id from user
 	const { walletId, saveToJsonFile } =
 		await cli.promptForWalletIdAndOutputMode();
-
-	// TODO: remove, testing purposes only
-	// const WALLET_ID_NO_AUTH = '16b2a2d6-449a-4fd3-b9b5-482d1a574232';
-	// const WALLET_ID_EMAIL_ONLY = 'de327a91-179d-433f-a7bd-7c10574fa42a';
-	// const WALLET_ID_EMAIL_AND_2FA = '6c9be814-6d95-4259-bbb1-aa0b1acff7b6';
-	//
-	// const WALLET_ID = WALLET_ID_EMAIL_AND_2FA;
 
 	const getPayloadTask = async () => {
 		return new Promise(async (resolve, reject) => {
@@ -33,45 +25,73 @@ const api = require('./utils/api');
 			const {
 				status: walletStatus,
 				payload: walletPayload,
-				message: walletMessage
+				message: walletStatusMessage
 			} = await api.getBcdcWallet({
 				sessionToken,
-				walletId
+				walletId,
+				isEmailAuthorized: false
 			});
 			if (walletStatus === 'success') {
 				return resolve(walletPayload);
 			}
 			if (walletStatus === 'error') {
-				return reject(walletMessage);
+				return reject(walletStatusMessage);
 			}
 
-			// neither success or error, start polling for email authorization
+			// email verification required, start polling for user response
 			console.log(`Waiting for email verification...`);
-			const { status: pollStatus, message: pollMessage } = await api.pollForEmailAuth({ sessionToken });
+			const { status: pollStatus, message: pollMessage } =
+				await api.pollForEmailAuth({ sessionToken });
 			if (pollStatus === 'error') {
 				return reject(pollMessage);
 			}
 
 			// email authorization complete, again attempt to obtain payload
 			console.log(`Email authorization success! Continuing...`);
-
 			const {
-				status: wallet2ndStatus,
-				payload: wallet2ndPayload,
-				message: wallet2ndMessage
+				status: walletEmailStatus,
+				payload: walletEmailPayload,
+				message: walletEmailMessage
 			} = await api.getBcdcWallet({
 				sessionToken,
 				walletId
 			});
-			if (wallet2ndStatus === 'success') {
-				return resolve(wallet2ndPayload);
+			if (walletEmailStatus === 'success') {
+				return resolve(walletEmailPayload);
 			}
-			if (wallet2ndStatus === 'error') {
-				return reject(wallet2ndMessage);
+			if (walletEmailStatus === 'error') {
+				return reject(walletEmailMessage);
 			}
 
-			// 2fa is also required
-			// TODO
+			// wallet has 2fa protection, start a loop that prompts user for 2fa code and attempts to access payload
+			let hasCorrect2fa = false;
+			while (!hasCorrect2fa) {
+				const { wallet2faCode } = await cli.promptForWallet2fa();
+				const {
+					status: wallet2faStatus,
+					payload: wallet2faPayload,
+					message: wallet2faMessage,
+					isWalletLocked
+				} = await api.getBcdcWallet2fa({
+					sessionToken,
+					wallet2faCode,
+					walletId
+				});
+				if (wallet2faStatus === 'success') {
+					hasCorrect2fa = true;
+					return resolve(wallet2faPayload);
+				}
+				// too many failed 2fa attempts
+				if (isWalletLocked) {
+					return reject(
+						'Wallet is locked due to too many failed 2FA attempts. Please try again later'
+					);
+				}
+				// user most likely entered wrong 2fa code
+				if (wallet2faStatus === 'error') {
+					console.log(wallet2faMessage);
+				}
+			}
 		});
 	};
 
@@ -80,19 +100,23 @@ const api = require('./utils/api');
 			if (saveToJsonFile) {
 				try {
 					fs.writeFileSync(`./wallet.aes.json`, payload.toString());
-					return console.log(`SAVE TO FILE: ${payload}`)
+					console.log(
+						`Success! Your encrypted wallet payload has been saved locally as wallet.aes.json`
+					);
 				} catch (err) {
-					console.log(`Encrypted Wallet Payload`)
-					console.log('')
-					console.log(payload)
-					console.log('')
-					console.log(`Error: Failed to write to filesystem. Copy and manually save your payload from above.`)
+					console.log(`Encrypted Wallet Payload`);
+					console.log('');
+					console.log(payload);
+					console.log('');
+					console.log(
+						`Error: Failed to write to filesystem. Copy and manually save your payload from above.`
+					);
 				}
 			} else {
-				console.log(`Encrypted Wallet Payload`)
-				console.log('')
-				console.log(payload)
-				console.log('')
+				console.log(`Encrypted Wallet Payload`);
+				console.log('');
+				console.log(payload);
+				console.log('');
 			}
 		})
 		.catch(err => {

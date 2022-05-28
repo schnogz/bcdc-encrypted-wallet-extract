@@ -1,7 +1,19 @@
 const axios = require('axios');
+const querystring = require('querystring');
 
 const BASE_URL = 'https://blockchain.info/';
 const API_CODE = '1770d5d9-bcea-4d28-ad21-6cbd5be018a8';
+
+const determine2faType = (authType) => {
+	switch (authType) {
+		case 1:
+			return 'Yubikey'
+		case 4:
+			return 'Google Authenticator'
+		case 5:
+			return 'SMS'
+	}
+}
 
 const getBcdcSession = async () => {
 	return await axios
@@ -23,8 +35,16 @@ const getBcdcWallet = async ({ sessionToken, walletId }) => {
 				authorization: `Bearer ${sessionToken}`
 			}
 		})
-		.then(({ data }) => {
-			// if we have a response, there was no email or 2fa on wallet
+		.then(({data}) => {
+			// check if 2fa is required
+			if (data.auth_type) {
+				return {
+					status: 'pending 2fa',
+					type: determine2faType(data.auth_type)
+				};
+			}
+
+			// if we made it this far, there was no email or 2fa on wallet
 			// parse contents and return payload
 			return {
 				status: 'success',
@@ -33,7 +53,6 @@ const getBcdcWallet = async ({ sessionToken, walletId }) => {
 		})
 		.catch(({ response }) => {
 			const error = response.data.initial_error.toLowerCase();
-			console.log(error)
 			// error indicates guid doesnt exist
 			if (error.includes('unknown wallet identifier')) {
 				return {
@@ -45,11 +64,41 @@ const getBcdcWallet = async ({ sessionToken, walletId }) => {
 			if (error.includes('authorization required') && error.includes('email')) {
 				return {
 					status: 'pending',
-					message:
-						'Email authorization required. Please authorize login via your email now.'
+					message: 'email'
 				};
 			}
+			return {
+				status: 'error',
+				message: response.data.toString()
+			};
 		});
+};
+
+const getBcdcWallet2fa = async ({ sessionToken, wallet2faCode, walletId }) => {
+	return await axios({
+		method: 'post',
+		url: `${BASE_URL}/wallet`,
+		data: querystring.stringify({
+			api_code: API_CODE,
+			guid: walletId,
+			length: wallet2faCode.length,
+			method: 'get-wallet',
+			payload: wallet2faCode
+		}),
+		headers: {
+			authorization: `Bearer ${sessionToken}`,
+			'content-type': 'application/x-www-form-urlencoded'
+		}
+	})
+		.then(({ data }) => ({
+			status: 'success',
+			payload: data.payload
+		}))
+		.catch(({ response }) => ({
+			status: 'error',
+			payload: response.data,
+			isWalletLocked: !response.data.includes('login attempts left')
+		}));
 };
 
 const pollForEmailAuth = async ({ sessionToken }) => {
@@ -70,7 +119,7 @@ const pollForEmailAuth = async ({ sessionToken }) => {
 			)
 			.then(async ({ data }) => {
 				if (data.guid) {
-					emailAuthorized = true
+					emailAuthorized = true;
 				} else {
 					await delay(3000);
 				}
@@ -84,11 +133,12 @@ const pollForEmailAuth = async ({ sessionToken }) => {
 	}
 	return {
 		status: 'success'
-	}
+	};
 };
 
 module.exports = {
 	getBcdcSession,
 	getBcdcWallet,
+	getBcdcWallet2fa,
 	pollForEmailAuth
 };

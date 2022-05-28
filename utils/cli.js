@@ -45,9 +45,9 @@ const promptForWallet2fa = async () => {
 		{
 			type: 'input',
 			name: 'wallet2faCode',
-			message: 'Enter 2fa code',
+			message: 'Enter 2FA code for wallet',
 			validate: value => {
-				if (!value) return '2fa code is required';
+				if (!value) return '2FA code is required';
 				return true;
 			}
 		}
