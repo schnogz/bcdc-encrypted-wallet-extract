@@ -1,6 +1,6 @@
 {
 	"name": "bcdc-encrypted-wallet-extract",
-	"description": "extract blockchain.com encrypted payloads from guids",
+	"description": "Extract blockchain.com/blockchain.info encrypted payloads from wallet guids",
 	"version": "0.0.1",
 	"license": "UNLICENSED",
 	"main": "index.js",
