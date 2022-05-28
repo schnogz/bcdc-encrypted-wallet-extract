@@ -51,7 +51,8 @@ const api = require('./utils/api');
 			const {
 				status: walletEmailStatus,
 				payload: walletEmailPayload,
-				message: walletEmailMessage
+				message: walletEmailMessage,
+				wallet2faType
 			} = await api.getBcdcWallet({
 				sessionToken,
 				walletId
@@ -66,7 +67,7 @@ const api = require('./utils/api');
 			// wallet has 2fa protection, start a loop that prompts user for 2fa code and attempts to access payload
 			let hasCorrect2fa = false;
 			while (!hasCorrect2fa) {
-				const { wallet2faCode } = await cli.promptForWallet2fa();
+				const { wallet2faCode } = await cli.promptForWallet2fa(wallet2faType);
 				const {
 					status: wallet2faStatus,
 					payload: wallet2faPayload,

@@ -40,7 +40,7 @@ const getBcdcWallet = async ({ sessionToken, walletId }) => {
 			if (data.auth_type) {
 				return {
 					status: 'pending 2fa',
-					type: determine2faType(data.auth_type)
+					wallet2faType: determine2faType(data.auth_type)
 				};
 			}
 
